@@ -25,40 +25,40 @@
             <h6 class="card-subtitle mb-2 text-muted text-center">Gaining persistence on Linux systems with Udev</h6>
             <hr/>
             <p class="card-text">
-                <h5 class="font-weight-bold">1) Introducción:</h5>
+                <h5 class="font-weight-bold"># Introducción:</h5>
                 <div class="row">
-                    <div class="col-sm text-center">
+                    <div class="col-sm">
                         Los mecanismos que realizan ejecución de funciones basados en eventos (triggers), han sido
                         ampliamente aprovechados durante la fase de <span class="font-weight-bold">Installation</span> del <span class="font-weight-bold">Cyber Kill Chain&reg;</span> (by Lockheed Martin),
-                        para ganar persistencia en los activos comprometidos por parte tanto de pentesters y red teams como
+                        para ganar persistencia en los activos comprometidos por parte, tanto de pentesters y Red Teams como
                         de actores reales en el teatro de operaciones del ciberespacio. Dichas técnicas son ampliamente documentadas
-                        en <span class="font-weight-bold">MITRE Att&ck</span> bajo el identificador "<a href="https://attack.mitre.org/techniques/T1546/" target="_blank">T1546</a>" donde se exponen diversos métodos en los que se abusa
-                        de estos mecanismo, mayoritariamente en sistemas Windows. En las siguientes líneas se expone como sacar
+                        en <span class="font-weight-bold">MITRE Att&ck</span> bajo el identificador "<a href="https://attack.mitre.org/techniques/T1546/" target="_blank">T1546</a>", donde se exponen diversos métodos en los que se abusa
+                        de estos mecanismos, mayoritariamente en sistemas Windows. En las siguientes líneas se expone cómo sacar
                         provecho del sistema <span class="font-italic">Udev</span> de Linux para precisamente esto, ganar persistencia,
                         ampliando así las técnicas disponibles para tal fin.
                     </div>
                 </div>
                 <br/>
-                <h5 class="font-weight-bold">2) Udev:</h5>
+                <h5 class="font-weight-bold"># Udev:</h5>
                 <div class="row">
-                    <div class="col-sm text-center">
+                    <div class="col-sm">
                         <p>
-                            Para poder entender bien de que abusa esta técnica es importante describir que es exactamente <span class="font-italic">Udev</span>.
-                        <span class="font-italic">Udev</span> a grandes rasgos es el sistemas que se encarga del manejo de dispositivos en el <span class="font-italic">userland</span> de los sistemas Linux
-                            desde la <span class="font-weight-bold">version 2.6 del kernel</span>, en la actualidad es parte de systemd. Entre sus principales
+                            Para poder entender bien de qué abusa esta técnica, es importante describir qué es exactamente <span class="font-italic">Udev</span>.
+                        <span class="font-italic">Udev</span>, a grandes rasgos, es el sistema que se encarga del manejo de dispositivos en el <span class="font-italic">userland</span> de los sistemas Linux
+                            desde la <span class="font-weight-bold">versión 2.6 del kernel</span>. En la actualidad es parte de systemd. Entre sus principales
                         responsabilidades está: la carga de los módulos de los dispositivos en el kernel o el manejo de los
-                        eventos de los dispositivos mediante la interfaz <span class="font-italic">uevent</span> también del kernel, entre otras muchas.
+                        eventos de los dispositivos, mediante la interfaz <span class="font-italic">uevent</span> también del kernel; entre otras muchas.
                         Es decir, al producirse un evento de dispositivo como conectar/desconectar un USB, este sistemas
-                        se encargara de manejar dicho evento y realizar las acciones que sean pertinentes, como por ejemplo
-                        cargar el firmware del dispositivo para su correcto funcionamiento. Y es precisamente este, el mecanismo
-                        del que nos aprovecharemos para alcanzar nuestro objetivo.
+                        se encargará de manejar dicho evento y realizar las acciones que sean pertinentes, como por ejemplo:
+                        cargar el firmware del dispositivo para su correcto funcionamiento. Y es precisamente este el mecanismo
+                        del que nos aprovecharemos, para alcanzar nuestro objetivo.
                         </p>
                         <p>
-                            Para poder cumplir con todo lo anteriormente descrito <span class="font-italic">Udev</span> se basa en un sistema de reglas donde
-                        se definen esas acciones, proveyendo un mecanismo de matcheo entre los eventos y las acciones a realizar.
-                        Estas reglas se encuentran definidas en las rutas <span class="font-italic">/usr/lib/udev/rules.d/</span> y <span class="font-italic">/etc/udev/rules.d/</span>,
-                        en caso de colisionar los nombres de algunas reglas prevalecerán las definidas en <span class="font-italic">/etc/</span>, estos archivos
-                        de reglas tambien deben acabar con una extensión <span class="font-italic">.rules</span>.
+                            Para poder cumplir con todo lo anteriormente descrito, <span class="font-italic">Udev</span> se basa en un sistema de reglas donde
+                        se definen esas acciones, proveyendo un mecanismo de reglas de coincidencia (match) entre los eventos y las acciones a realizar.
+                        Estas reglas se encuentran definidas en las rutas <span class="font-italic">/usr/lib/udev/rules.d/</span> y <span class="font-italic">/etc/udev/rules.d/</span>.
+                        En caso de colisionar los nombres de algunas reglas, prevalecerán las definidas en <span class="font-italic">/etc/</span>. Estos archivos
+                        de reglas también deben acabar con una extensión <span class="font-italic">.rules</span>.
                         </p>
                     </div>
                 </div>
@@ -66,33 +66,33 @@
                     <div class="col-sm text-center">
                         <img src="udev.png" class="img-fluid img-thumbnail" alt="udev diagram">
                         <br/>
-                        <small>Diagrama de Udev.</small>
+                        <small>Figura 1: Diagrama de Udev.</small>
                     </div>
                 </div>
                 <br/>
-                <h5 class="font-weight-bold">3) La técnica y su uso ofensivo:</h5>
+                <h5 class="font-weight-bold"># La técnica y su uso ofensivo:</h5>
                 <div class="row">
-                    <div class="col-sm text-center">
+                    <div class="col-sm">
                         <p>
                             La técnica como tal es bien sencilla. Tan solo abusaremos de las funcionalidades provistas por el
                             propio <span class="font-italic">Udev</span>.
                         </p>
                         <p>
-                            Nos situamos en un contexto de postexplotación donde hemos alcanzado los privilegios suficientes
-                            como para añadir reglas a alguna de las rutas anteriormente descritas ya sea por escalada de privilegios
-                            o por una configuración/combinanción insegura de los permisos en dichas rutas.
+                            Nos situamos en un contexto de postexplotación donde hemos alcanzado los privilegios suficientes,
+                            como para añadir reglas a alguna de las rutas anteriormente descritas, ya sea por escalada de privilegios
+                            o por una configuración/combinación insegura de permisos en dichas rutas.
                         </p>
                         <p>
-                            En el siguiente ejemplo se muestra el contenido de una regla que lanzara nuestra carga útil
-                            a persistir (malware, implante, etc) usando como disparador un evento de dispositivo USB, en
-                            este caso la inserción del mismo. De está forma al inserta un USB nuestra carga útil entrará en ejecución.
+                            En el siguiente ejemplo se muestra el contenido de una regla que lanzará nuestra carga útil
+                            a persistir (malware, implante, etc.) usando como disparador un evento de dispositivo USB, en
+                            este caso, la inserción del mismo. De esta forma al inserta un USB, nuestra carga útil entrará en ejecución.
                         </p>
                         <pre><code class="lang-highlight">ACTION=="add", SUBSYSTEM=="usb", RUN+="/bin/sh /tmp/payload.sh"</code></pre>
                         <br/>
                         <p>
-                            Para poder determinar que disparadores nos puede interesar usar, como es obvio podemos hacer
-                            usos de las mismas herramientas provistas por <span class="font-italic">Udev</span>, de esta
-                            manera no solo podremos limitarnos al caso anteriormente descrito. Para ello te indicamos
+                            Para poder determinar qué disparadores nos puede interesar usar, como es obvio, podemos hacer
+                            uso de las mismas herramientas provistas por <span class="font-italic">Udev</span>, de esta
+                            manera no sólo podremos limitarnos al caso anteriormente descrito. Para ello te indicamos
                             el camino a seguir y te sugerimos que profundices con los siguientes comandos y sus parámetros:
                         </p>
                         <div class="col-sm text-left">
@@ -104,7 +104,7 @@
                             </ul>
                         </div>
                         <p>
-                            Adicionalmente te invito a que profundices en la <a href="https://linux.die.net/man/7/udev" target="_blank">documentación de <span class="font-italic">Udev</span></a>.
+                            Adicionalmente te invitamos también a que profundices en la <a href="https://linux.die.net/man/7/udev" target="_blank">documentación de <span class="font-italic">Udev</span></a>.
                         </p>
                         <pre><code class="lang-highlight">$ udevadm monitor --environment
 
@@ -122,43 +122,43 @@ SEQNUM=33473</code></pre>
                         <p>
                             En el bloque anterior se puede observar una traza sobre un evento obtenido con el primer
                             comando arriba indicado, donde se muestra un evento lanzado al producirse una atenuación de
-                            la iluminación de la pantalla en respuesta a la inactividad del usuario. Lo que significa que
-                            podríamos utilizar también este evento para disparar nuestra carga útil. De está forma nos
-                            aseguraríamos de que se lanzará nuestra carga útil cuando el usuario no estuviera presente
-                            enfrente de la máquina comprometida.
+                            la iluminación de la pantalla, en respuesta a la inactividad del usuario. Lo que significa que
+                            podríamos utilizar también este evento para disparar nuestra carga útil. De esta forma nos
+                            asegurariamos de que se lanzará nuestra carga útil cuando el usuario no estuviera enfrente
+                            de la máquina comprometida.
                         </p>
                         <p>
-                            Una vez escrita la regla que nos interese en la ruta adecuada, será necesario forzar una recarga
+                            Una vez escrita la regla que nos interese, en la ruta adecuada, será necesario forzar una recarga
                             de todas las reglas de <span class="font-italic">Udev</span>. Para ello es necesario que poseamos
                             privilegios para lanzar la ya nombrada utilidad <span class="font-italic">udevadm</span>, mediante
                             el comando <span class="font-italic">udevadm control --reload</span>. Otra forma de lograr esto es
                             forzar un reinicio del sistema, bien sea porque tenemos privilegios para ello o porque podamos
-                            explotar algún fallo de denegación de servicio que nos permita hacer que el sistema se reinicie.
+                            explotar algún fallo de denegación de servicio, que nos permita hacer que el sistema se reinicie.
                             Contar con acceso físico también nos resolvería este problema.
                         </p>
                     </div>
                 </div>
                 <br/>
-                <h5 class="font-weight-bold">4) Conclusiones finales:</h5>
+                <h5 class="font-weight-bold"># Conclusiones finales:</h5>
                 <div class="row">
-                    <div class="col-sm text-center">
+                    <div class="col-sm">
                         <p>
-                            ¿Está tu EDR u otras soluciones observando <span class="font-italic">Udev</span> en busca de este tipo de persistencias?,
+                            ¿Está tu EDR u otras soluciones observando <span class="font-italic">Udev</span> en busca de este tipo de persistencias?
                             ¿Está tu organización y equipos de SecOps al tanto de está técnica de persistencia?
-                            Las técnica de persistencia basadas en eventos (triggers) normalmente (como en este caso),
-                            eliminan la necesidad de tener nuestra carga útil en continua ejecución lo que reduce
+                            Las técnicas de persistencia basadas en eventos (triggers) normalmente (como en este caso),
+                            eliminan la necesidad de tener nuestra carga útil en continua ejecución, lo que reduce
                             considerablemente el ruido y la atención que podría atraer la ejecución continua de un
                             proceso en el sistema, siempre y cuando claro, no se hiciera uso de otras técnicas de
                             ocultación ya existentes. Si además a esto le sumamos el uso combinado que podríamos hacer
-                            de esta técnica de persistencia con cargas útiles de tipo filess o la utilización de GTFOBins,
-                            hacen estás técnicas especialmente interesantes para escenarios donde se requiera de una alta
-                            discreción y ocultación de nuestras cargas útiles una vez comprometido el activo, aumentando
+                            de esta técnica de persistencia, con cargas útiles de tipo fileless o la utilización de GTFOBins,
+                            hacen estas técnicas especialmente interesantes para escenarios donde se requiera de una alta
+                            discreción y ocultación de nuestras cargas útiles, una vez comprometido el activo, aumentando
                             probablemente el MTTD.
                         </p>
                         <p>
-                            Para acabar, como hemos podido ver esta técnica lejos está de requerir grandes capacidades
+                            Para acabar, como hemos podido ver, esta técnica, lejos está de requerir grandes capacidades
                             técnicas para su ejecución, un hecho que facilita que pueda ser utilizada por <span class="font-weight-bold">commodity attackers</span>
-                            y no sólo por actores que dispongan de grandes recursos y capacidades operativas como actores estatales y
+                            y no sólo por actores que dispongan de grandes recursos y capacidades operativas, como actores estatales y
                             otros grupos APT, como si que podría llegar a ocurrir con otras TTPs.
                         </p>
                     </div>
