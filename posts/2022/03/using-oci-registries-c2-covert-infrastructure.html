@@ -1,0 +1,422 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>@codexlynx | Usando registros OCI como infraestructura de comunicaciones C2 encubierta</title>
+    <meta charset="utf-8">
+    <meta name="author" content="codexlynx">
+    <meta name="description" content="codexlynx">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <link rel="icon" href="/favicon.png" type="image/x-icon" sizes="16x16" />
+    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.4.1/css/bootstrap.min.css" integrity="sha384-Vkoo8x4CGsO3+Hhxv8T/Q5PaXtkKtu6ug5TOeNV6gBiFeWPGFN9MuhOf23Q9Ifjh" crossorigin="anonymous">
+    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/font-awesome/4.7.0/css/font-awesome.min.css" integrity="sha384-wvfXpqpZZVQGK6TAh5PVlGOfQNHSoD2xbE+QkPxCAFlNEevoEH3Sl0sibVcOQVnN" crossorigin="anonymous">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/prismjs@1.15.0/themes/prism.min.css"/>
+    <link rel="stylesheet" href="/styles.css">
+</head>
+<body>
+<nav class="navbar navbar-light bg-light">
+    <span class="navbar-brand mb-0 h1 font-weight-bold">@codexlynx</span>
+    <a href="/" class="btn btn-dark"><i class="fa fa-home" style="color: white">&nbsp;/home</i></a>
+</nav>
+
+<div class="container" style="margin-top: 80px; max-width: 1000px;">
+    <div class="card">
+        <div class="card-body">
+            <h4 class="card-title text-center font-weight-bold">Usando registros OCI como infraestructura de comunicaciones C2 encubierta (ES)</h4>
+            <h6 class="card-subtitle mb-2 text-muted text-center">Using OCI registries as C2 covert communications infrastructure</h6>
+            <hr/>
+            <p class="card-text">
+            <h5 class="font-weight-bold"># Introducción:</h5>
+            <div class="row">
+                <div class="col-sm">
+                    <p>
+                        El comando y control (C2) es sin duda una de las fases más críticas durante el desarrollo de operaciones ofensivas en el ciberespacio,
+                        pero también la fase que idealmente más se debe prolongar en el tiempo durante toda la cadena de compromiso.
+                        El progreso de esta fase tendrá un impacto directo, no solo en el éxito funcional de las operaciones si no en el OPSEC de las mismas.
+                    </p>
+                    <p>
+                        A pesar de ser perfectamente posible la ejecución de operaciones ofensivas o el desarrollo de implantes que por su naturaleza no requieran
+                        de C2 (mediante el uso por ejemplo de bombas lógicas) serán probablemente estás ocasiones mucho menos frecuentes que las que sí lo requieran.
+                    </p>
+                    <p>
+                        De poco sirve ser capaces de obtener acceso inicial a los objetivos, si luego somos incapaces de llevar a cabo un C2 satisfactoriamente.
+                        Aumentar el MTTD (Mean Time To Detect) y dificultar el posible proceso de atribución llevado a cabo por nuestros adversarios,
+                        son objetivos que en gran medida recaen en esta fase. Por otro lado, debe ser prioridad, maximizar la disponibilidad del canal de comunicación,
+                        garantizar la confidencialidad, y mantener la integridad operativa en nuestro canal C2.
+                    </p>
+                    <p>
+                        En las siguientes líneas nos centraremos exclusivamente en los canales de comunicación C2 y en la descripción de un esquema de comunicaciones
+                        encubiertas para C2 haciendo uso de registros OCI (Open Container Iniciative) como "relays", aumentando así la discreción,
+                        la ocultación y el anonimato de dichas comunicaciones.
+                    </p>
+                    <p>
+                        Las comunicaciones encubiertas (también conocidas como COVCOM) tienen también su espacio fuera del mundo del C2.
+                        Son una importante herramienta contra la censura en países como China, siendo esta un área de estudio en efervescencia y donde académicamente se está haciendo mucho esfuerzo.
+                        Es en este punto donde esta área se entremezcla con otras áreas de estudio cómo la privacidad.
+                    </p>
+                    <p>
+                        También el comando y control y las comunicaciones encubiertas son conceptos que no soló se limitan al ciberespacio. Desde que existe la guerra han desempeñado un papel indispensable
+                        en el desarrollo de cualquier conflicto, en tiempos de paz y en tiempos de guerra. Cabe destacar el importante papel que desempeñan estos dos conceptos en el transcurso de operaciones HUMINT.
+                        De poco sirve tener fuentes humanas si no somos capaces de comunicarnos con ellas, algo que además tiene especial sentido cuando se trabaja en escenarios no cooperativos.
+                        La radio y los buzones muertos han sido y seguirán siendo por mucho tiempo herramientas indispensables para tal fin. Es objetivo prioritario de las labores de contrainteligencia tratar de descubrir
+                        y detectar estos canales de comunicaciones encubiertas.
+                    </p>
+                </div>
+            </div>
+            <br/>
+            <h5 class="font-weight-bold"># Estado del arte:</h5>
+            <div class="row">
+                <div class="col-sm">
+                    <p>
+                        De vuelta a nuestro dominio de trabajo, existen numerosas técnicas, estrategias y esquemas que ayudan a alcanzar los objetivos arriba descritos. No es propósito de estas líneas detallar en profundidad las mismas,
+                        pero si proveer los siguientes recursos con el fin de contextualizar e introducir el trabajo y el estado actual al respecto.
+                    </p>
+                    <p>
+                        Como primer recurso destaca la magnífica charla de Nick Landers (@monoxgas) de la empresa NetSPI durante la Black Hat USA 2019 <a href="https://www.youtube.com/watch?v=2BEwqbCbQuM" target="_blank">[1]</a>,
+                        su charla modela y explica bastante bien todo lo referente a canales de comunicación C2 en el contexto que nos atañe. También puedes encontrar los slides aquí <a href="https://i.blackhat.com/USA-19/Wednesday/us-19-Landers-Flying-A-False-Flag-Advanced-C2-Trust-Conflicts-And-Domain-Takeover.pdf" target="_blank">[2]</a>.
+                    </p>
+                    <p>
+                        Como segundo recurso apuntó, como era de esperar a MITRE Att&ck, dentro de la sección de tácticas "TA0011" <a href="https://attack.mitre.org/tactics/TA0011/" target="_blank">[3]</a> la cuál está dedicada completamente a C2.
+                        Como siempre un magnífico trabajo por parte de MITRE proveyendo una extensa taxonomía sobre el tema.
+                    </p>
+                    <p>
+                        Otras técnicas a destacar van, desde el ya famoso y mencionado en los anteriores recursos domain fronting al moderno domain borrowing:
+                    </p>
+                    <div class="col-sm text-left">
+                        <ul>
+                            <li>Domain Fronting</li>
+                            <li>Domain Hiding (Defcon 28 / 2020) <a href="https://media.defcon.org/DEF%20CON%2028/DEF%20CON%20Safe%20Mode%20presentations/DEF%20CON%20Safe%20Mode%20-%20Erik%20Hunstad%20-%20Domain%20Fronting%20is%20Dead%20Long%20Live%20Domain%20Fronting.pdf" target="_blank">[4]</a></li>
+                            <li>Domain Shadowing (30th USENIX Security Symposium / 2021) <a href="https://www.usenix.org/system/files/sec21_slides_wei.pdf" target="_blank">[5]</a></li>
+                            <li>Domain Borrowing (Black Hat Asia 2021) <a href="https://i.blackhat.com/asia-21/Thursday-Handouts/as-21-Ding-Domain-Borrowing-Catch-My-C2-Traffic-If-You-Can.pdf" target="_blank">[6]</a></li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+            <br/>
+            <h5 class="font-weight-bold"># Taxonomía y antecedentes similares:</h5>
+            <div class="row">
+                <div class="col-sm">
+                    <p>
+                        Como habremos podido comprobar, encapsular las comunicaciones C2 en protocolos como HTTP (tal y
+                        como se detalla en la subtecnica "<span class="font-weight-bold">T1071.001</span>" <a href="https://attack.mitre.org/techniques/T1071/001/" target="_blank">[7]</a> de MITRE Att&ck), o ocultar esas comunicaciones mediante
+                        el uso de servicios online de confianza (técnica "<span class="font-weight-bold">T1102</span>" <a href="https://attack.mitre.org/techniques/T1102/" target="_blank">[8]</a>), son prácticas comunes.
+                        El proyecto "<span class="font-weight-bold">Living Off Trusted Sites (LOTS) Project</span>" <a href="https://lots-project.com/" target="_blank">[9]</a> trata de documentar el uso de servicios
+                        online de confianza para tales fines.
+                    </p>
+                    <p>
+                        Hasta la CIA lo dejaba bien claro a sus ingenieros encargados del desarrollo de implantes en la guia
+                        "<span class="font-weight-bold">Development Tradecraft DOs and DON'Ts</span>", respecto a la encapsulación de comunicaciones C2 en otros protocolos,
+                        como bien pudimos saber gracias a la filtración "Vault 7" de Wikileaks. No enlazaremos directamente a Wikileaks,
+                        por razones obvias.
+                    </p>
+                    <p>
+                        <span class=""><code class="lang-highlight">
+                            "(S//NF) DO use IETF RFC compliant network protocols as a blending layer. The actual data, which must be encrypted in transit across the network,
+                            should be tunneled through a well known and standardized protocol (e.g. HTTPS)"
+                        </code></span>
+                    </p>
+                    <p>
+                        Los antecedentes también son numerosos, como primero de ellos podríamos analizar al grupo Turla. Este grupo asociado al gobierno ruso,
+                        ha usado TTPs donde se hace uso de HTTP/HTTPs, Dropbox, Email o GitHub entre otros para sus comunicaciones C2.
+                    </p>
+                    <p>
+                        A este grupo podemos sumar el grupo APT28 (o Sofacy), también de origen ruso pero más claramente vinculado el GRU,
+                        el servicio de inteligencia militar de las Fuerzas Armadas de la Federación Rusa, que nuevamente hace uso de TTPs donde
+                        se usan HTTP/HTTPS, Email o Google Drive. A modo informativo y complementario añadimos que en 2018 investigadores de
+                        Kaspersky relacionaron a estos dos actores al encontrar código compartido entre el malware de Turla y el de APT28 <a href="https://www.kaspersky.com/about/press-releases/2018_russian-speaking-apts-turla-and-sofacy-share-malware-delivery-scheme-and-overlap-some-targets-in-asia" target="_blank">[10]</a>.
+                    </p>
+                    <p>
+                        En Octubre de 2020 la Unión Europea responde a las agresiones cibernéticas de Rusia, ampliando las medidas ya existentes en las "Decisiones PESC 2019/797" <a href="https://eur-lex.europa.eu/legal-content/ES/TXT/PDF/?uri=CELEX:32019D0797" target="_blank">[11]</a>
+                        y apuntando explícitamente al GRU y dos de sus agentes asociados a APT28 y Turla en la "Decisiones PESC 2020/1537" <a href="https://eur-lex.europa.eu/legal-content/ES/TXT/PDF/?uri=CELEX:32020D1537" target="_blank">[12]</a>.
+                    </p>
+                    <p>
+                        Tal y como expusimos durante la introducción, en estás líneas describiremos un esquema de comunicaciones C2 encubriendo (disfrazando) las mismas como artefactos OCI,
+                        y como utilizar instancias de registros OCI (de confianza, o no) como infraestructura para comunicaciones C2, ampliando así las técnicas disponibles para este fin
+                        y explotando los registros OCI a nuestro favor.
+                    </p>
+                </div>
+            </div>
+            <br/>
+            <h5 class="font-weight-bold"># Especificaciones OCI:</h5>
+            <div class="row">
+                <div class="col-sm">
+                    <p>
+                        Lo primero que debemos entender es, qué es OCI y que define. OCI son las siglas de Open Container Initiative, una iniciativa de la Linux Fundation <a href="https://opencontainers.org/" target="_blank">[13]</a>
+                        que tiene como objetivo diseñar y mantener especificaciones abiertas para las plataformas de contenedores, las principales son las siguientes:
+                    </p>
+                    <div class="col-sm text-left">
+                        <ul>
+                            <li>OCI Runtime Specification <a href="https://github.com/opencontainers/runtime-spec/blob/main/spec.md" target="_blank">[14]</a></li>
+                            <li>OCI Image Format <a href="https://github.com/opencontainers/image-spec/blob/main/spec.md" target="_blank">[15]</a></li>
+                            <li>OCI Distribution Specification <a href="https://github.com/opencontainers/distribution-spec/blob/main/spec.md" target="_blank">[16]</a></li>
+                        </ul>
+                    </div>
+                    <p>
+                        La especificación que nos interesa es la "OCI Distribution Specification" que estandariza la distribución de artefactos OCI.
+                        Software como Docker o Podman de Red Hat implementan estás especificaciones. Nuestros artefactos serán construidos respetando dicha especificación.
+                    </p>
+                </div>
+            </div>
+            <br/>
+            <h5 class="font-weight-bold"># Registros OCI:</h5>
+            <div class="row">
+                <div class="col-sm">
+                    <p>
+                        Una vez construidos nuestros artefactos, es posible distribuirlos haciendo uso de registros. Los registros no son más que servicios en red que permiten la escritura remota de artefactos (push),
+                        y la lectura remota de los mismos (pull), comúnmente mediante el uso de un API HTTP. La "OCI Distribution Specification" fue redactada basándose en el protocolo de "Docker Registry HTTP API V2".
+                    </p>
+                </div>
+            </div>
+            <div class="row">
+                <div class="col-sm text-center">
+                    <img src="schema_kubernetes.png" class="img-fluid img-thumbnail" alt="kubernetes schema">
+                    <br/>
+                    <small>Figura 1:  Esquema común de relación entre un desarrollador y un cluster de Kubernetes mediante un registro.</small>
+                </div>
+            </div>
+            <br/>
+            <h5 class="font-weight-bold"># Planteamiento del canal C2:</h5>
+            <div class="row">
+                <div class="col-sm">
+                    <p>
+                        Una vez descritas las partes intervinientes, pasemos a describir el esquema de funcionamiento de nuestro canal de comunicaciones C2. En su versión más básica el esquema es el siguiente:
+                    </p>
+                    <div class="col-sm text-center">
+                        <img src="schema_basic.png" class="img-fluid img-thumbnail" alt="basic schema">
+                        <br/>
+                        <small>Figura 2: Esquema básico de funcionamiento de nuestro C2.</small>
+                    </div>
+                    <br/>
+                    <p>
+                        Como podemos observar nuestro esquema está dividido en tres bloques totalmente asíncronos. El primer bloque será disparado por una acción manual del lado del atacante,
+                        en nuestro caso un operador tratando de enviar comandos a uno de los implantes. Nuestro manager creará un payload con los comandos a enviar, lo empaquetará en un artefacto OCI y lo escribirá en el registro.
+                    </p>
+                    <p>
+                        El segundo bloque se dispararía de forma automática en base a lo marcado por un jitter. Un jitter en el contexto que nos ocupa define el intervalo de lo que en el mundo del desarrollo de software se conoce como polling,
+                        en nuestro caso contra el API del registro. Este intervalo puede ser determinista, pero en la actualidad es común que ese intervalo sea aleatorio o marcado por otras reglas no deterministas,
+                        con el fin de reducir al máximo la huella de red producida por las comunicaciones del implante. Este bloque leerá del registro, buscará el payload de nuestro C2 dentro del artefacto OCI y realizará las acciones pertinentes.
+                        Una vez finalizados, el implante creará otro payload a modo de respuesta, y generará otro artefacto OCI que más tarde escribirá de vuelta en el registro.
+                    </p>
+                    <p>
+                        En último bloque el manager solo se encargara de recuperar del registro el artefacto OCI con la respuesta, leer el payload y entregarla al operador.
+                    </p>
+                    <p>
+                        Tal y como dice el título al inicio de estás líneas, nos hemos centrado en las especificaciones y registros OCI. Esto se debe a una simple razón,
+                        la optimización del tamaño de los artefactos y por extensión el ancho de banda requerido en cada operación de red, buscando una implementación simple,
+                        donde se construyen estos artefactos con lo mínimo indispensable para el funcionamiento de nuestro canal de comunicaciones C2.
+                    </p>
+                    <p>
+                        La idea subyacente es perfectamente extrapolable a otras posibles especificaciones de artefactos que puedan existir y que respondan al mismo esquema base de funcionamiento (registro / push / pull).
+                        También, si fuera necesario se podrían utilizar artefactos de imágenes base como Alpine Linux para envolver y ocultar aún más el payload de nuestro C2, teniendo en cuenta la penalización en tamaño y
+                        todas las implicaciones que esto conlleva.
+                    </p>
+                    <p>
+                        Una vez descrito el esquema básico y a alto nivel del funcionamiento de nuestro C2, tenemos que tener presente que será necesario añadir los mecanismos adecuados para que la entrega de los payloads
+                        sea dirigible a diferentes implantes o grupos de implantes. Para ello podríamos aprovecharnos de otros elementos provistos por la especificación, tales como las capas o las etiquetas de los artefactos.
+                    </p>
+                    <p>
+                        También es necesaria la aplicación de una capa criptográfica que nos asegure la confidencialidad y la integridad operativa en nuestro canal de comunicaciones C2, eliminado el acceso en claro a nuestro canal
+                        y todos los problemas derivados. Un esquema de clave pública sería ideal para ello.
+                    </p>
+                    <p>
+                        Este esquema de funcionamiento encaja perfectamente en el esquema con el que suelen funcionar implantes de tipo baliza (beacon), utilizado por software ofensivo ampliamente reconocido en la industria como Cobalt Strike <a href="https://www.cobaltstrike.com/" target="_blank">[17]</a>
+                        donde se utilizan protocolos como HTTP o DNS de la misma forma que nosotros, demostrando así la validez y versatilidad de estos esquemas.
+                    </p>
+                    <p>
+                        Nuestro esquema también nos provee de una capa de anonimato implícita, puesto que el registro se interpone entre el operador y el implante, de la misma forma que ocurriría si utilizaramos redirectores (redirectors),
+                        contribuyendo así al principio OPSEC de compartimentación (en este caso de las comunicaciones) y por ello cumpliendo con uno de nuestros objetivos principales.
+                    </p>
+                </div>
+            </div>
+            <br/>
+            <h5 class="font-weight-bold"># Aumentando el anonimato y la resiliencia:</h5>
+            <div class="row">
+                <div class="col-sm">
+                    <p>En este nuevo esquema buscamos aumentar la resiliencia y el anonimato, para ello aumentaremos la complejidad de nuestro esquema, añadiendo de 2 a N registros a nuestros implantes, pasando a ser nuestro esquema en el siguiente:</p>
+                    <div class="col-sm text-center">
+                        <img src="schema_advanced.png" class="img-fluid img-thumbnail" alt="advanced schema">
+                        <br/>
+                        <small>Figura 3: Versión compleja y mejorada de nuestro esquema C2.</small>
+                    </div>
+                    <br/>
+                    <p>
+                        Como podemos observar la principal diferencia está en la inserción del concepto de retransmisión, que se vuelve clave en nuestro nuevo esquema. Será el encargado de hacer fluir la información de un registro a otro
+                        sin que el manager tenga que escribir necesariamente esa información en cada uno de los registros implicados.
+                    </p>
+                    <div class="col-sm text-center">
+                        <img src="topology.png" class="img-fluid img-thumbnail" alt="topology">
+                        <br/>
+                        <small>Figura 4: Diagrama de Euler a modo de representación de una posible topología de nuestro C2.</small>
+                    </div>
+                    <br/>
+                    <p>
+                        En esta figura se ilustra un ejemplo de una de las topologías que se podrían llegar a formar. Según cómo balanceamos las relaciones entre registros e implantes, conseguiremos más o menos garantías. En este ejemplo concreto, los implantes N + 1 y <br/> N + 2,
+                        proveen las mismas garantías de anonimato puesto que tienen un salto de 2 registros y un implante antes de llegar al manager.
+                    </p>
+                    <p>
+                        Por otro lado el implante N + 2 es el más resiliente, puesto que se encuentra interactuando con dos registros, si uno cae tiene otro. Por último el Implante 1 es un SPOF (Single Point Of Failure) (fácilmente solucionable haciendo que el manager escriba inicialmente a más de un registro,
+                        es decir cambiando ligeramente de topología) y también el que menos anonimato aporta puesto que solo se interpone un registro entre él y el manager.
+                    </p>
+                    <p>
+                        Para que este esquema llegue a ser realmente funcional será necesaria la implementación de controles y otros elementos que nos aseguren la correcta entrega de la información (como ACKs), o la retransmisión limitada de la misma (como mecanismos Time-To-Live).
+                    </p>
+                </div>
+            </div>
+            <br/>
+            <h5 class="font-weight-bold"># Abusando de infraestructura expuesta:</h5>
+            <div class="row">
+                <div class="col-sm">
+                    <p>
+                        Los registros son una pieza clave en nuestro esquema de comunicaciones C2, qué registros usar es una pregunta que tiene múltiples respuestas. En primera instancia podríamos hospedar nuestro propio registro OCI o usar algún SaaS gratuito que ofrezca este servicio (como Docker Hub en su capa más básica)
+                        o de pago (como AWS ECR). Debemos tener especial cuidado si escogemos está opción puesto que es muy probable que se acabe vinculando con nosotros si no hacemos las cosas lo suficientemente bien en términos de OPSEC.
+                    </p>
+                    <p>
+                        Como segunda opción podríamos tratar de buscar y explotar fallos de configuración en el permisionado de cuentas de terceros para usar sus registros a nuestro favor. Podríamos ejemplificar este caso con Amazon Web Services (AWS), donde una incorrecta configuración del permisionado en IAM podría permitir a
+                        un tercero como nosotros la ejecución de operaciones arbitrarias en su servicio ECR.
+                    </p>
+                    <p>
+                        A continuación te dejamos una lista de posibles servicios candidatos a ser usados para nuestros fines:
+                    </p>
+                    <div class="col-sm text-left">
+                        <ul>
+                            <li>Docker Hub</li>
+                            <li>Quay Container Registry</li>
+                            <li>Github Package Registry</li>
+                            <li>GitLab Registry</li>
+                            <li>AWS Elastic Container Registry</li>
+                            <li>Azure Container Registry</li>
+                            <li>Google Container Registry</li>
+                            <li>Oracle Cloud Infrastructure Registry</li>
+                            <li>Alibaba Cloud Container Service</li>
+                            <li>IBM Cloud Container Registry</li>
+                        </ul>
+                    </div>
+                    <p>
+                        La ventaja de usar algunos de estos servicios es que el tráfico de red será generado hacia unas infraestructuras que probablemente no levantarán tantas sospechas como las que sí podrían llegar a generarse si fueran contra un registro en un VPS convencional.
+                    </p>
+                    <p>
+                        Como tercera opción, quizás la más interesante, pasaría por sacrificar el uso de estos servicios y la confianza que pudieran llevar asociada, para pasar a utilizar instancias auto hospedajes, expuestas e inseguras.
+                        Para ello nuestro objetivo será localizar estás instancias expuestas en internet y nuevamente mal configuradas, de forma que un tercero como nosotros, pueda realizar operaciones (push / pull) en ellos.
+                    </p>
+                    <p>
+                        La lista de software candidato para esto es la siguiente:
+                    </p>
+                    <div class="col-sm text-left">
+                        <ul>
+                            <li>Docker Registry</li>
+                            <li>GitLab Registry (self-hosted)</li>
+                            <li>VMware Harbor</li>
+                            <li>Nexus Repository</li>
+                            <li>Artifactory Docker Registry</li>
+                            <li>SUSE Portus</li>
+                        </ul>
+                    </div>
+                    <p>
+                        En el momento de escribir estás líneas hemos localizado un total de <span class="font-weight-bold">1.141</span> instancias sólo para el software "Docker Registry" y por tanto potencialmente explotables para nuestro fin.
+                    </p>
+                    <div class="col-sm text-center">
+                        <img src="registries_countries.png" class="img-fluid img-thumbnail" alt="registries countries">
+                        <br/>
+                        <small>Figura 5: Top 5 de países con más "Docker Registries" expuestos.</small>
+                    </div>
+                    <br/>
+                    <div class="col-sm text-center">
+                        <img src="registries_world.png" class="img-fluid img-thumbnail" alt="registries world">
+                        <br/>
+                        <small>Figura 6: Distribución geográfica de los “Docker Registries” expuestos.</small>
+                    </div>
+                    <br/>
+                    <p>
+                        En Febrero de 2020 la unidad de inteligencia de amenazas de Palo Alto Networks (Unit 42), publicó un informe <a href="https://unit42.paloaltonetworks.com/leaked-docker-code/" target="_blank">[18]</a> donde se habla acerca de código expuesto en registros Docker inseguros. En ese estudio se aportan diversos datos,
+                        algunos relevantes para nosotros: de los 941 registros identificados por el equipo de Palo Alto, 117 no tenían autenticación y de los cuáles, 92 permitían operaciones de escritura (push) y 80 permitían operaciones de lectura (pull).
+                        Estos números nos demuestran la viabilidad de lo aquí expuesto y de lo que se podría llegar a manejar.
+                    </p>
+                </div>
+            </div>
+            <br/>
+            <h5 class="font-weight-bold"># Trabajo futuro:</h5>
+            <div class="row">
+                <div class="col-sm">
+                    <p>
+                        El principal trabajo futuro resultante de estás líneas, sería el desarrollo funcional de los esquemas aquí descritos. Para ello un gran porcentaje del software ofensivo existente, tanto de uso libre como comercial proveen comúnmente alguna vía para la implementación de canales de C2 a medida.
+                        Enumeramos aquí algunos de ellos:
+                    </p>
+                    <div class="col-sm text-left">
+                        <ul>
+                            <li>Cobalt Strike ExternalC2 <a href="https://www.cobaltstrike.com/help-externalc2" target="_blank">[19]</a></li>
+                            <li>Covenant C2Bridge <a href="https://github.com/cobbr/C2Bridge" target="_blank">[20]</a></li>
+                            <li>Mythic C2 Development <a href="https://docs.mythic-c2.net/customizing/c2-related-development" target="_blank">[21]</a></li>
+                        </ul>
+                    </div>
+                    <p>
+                        Especial mención en este punto para el producto Nighthawk <a href="https://www.mdsec.co.uk/nighthawk/" target="_blank">[22]</a> de MDSec, puesto que a pesar de no contar en estos momentos de los detalles técnicos para tal fin, su software goza de una increíble flexibilidad que nos permitirá no solo implementar nuestros esquemas si no
+                        también personalizar otros muchísimos aspectos fundamentales para el mantenimiento de unos altos niveles de OPSEC en nuestras operaciones.
+                    </p>
+                    <p>
+                        Por último mencionar la existencia del framework C3 (Custom Command and Control) de F-Secure Lab's <a href="https://github.com/FSecureLABS/C3" target="_blank">[23]</a>, cuyo fin es desacoplar la lógica de los canales C2, del resto de la lógica del software ofensivo. En estos momentos cuenta con soporte para Covenant y Cobalt Strike.
+                    </p>
+                    <p>
+                        Otra vía a explorar es la utilización de registros OCI para la entrega y almacenamiento de código malicioso, mediante stagers o droppers.
+                    </p>
+                </div>
+            </div>
+            <br/>
+            <h5 class="font-weight-bold"># Conclusiones:</h5>
+            <div class="row">
+                <div class="col-sm">
+                    <p>
+                        Una vez más la creatividad encuentra nuevas formas de hacer que la información fluya desde nuestros implantes en los sistemas adversarios hasta nosotros. Una carrera entre el gato y el ratón que como en tantos otros muchos aspectos de este campo, difícilmente tendrá fin.
+                        ¿Estaría tu organización dispuesta a bloquear a sus desarrolladores el acceso a servicios como Docker Hub? ¿Están tus equipos de SecOps y herramientas de monitorización preparadas para hacer introspección de artefactos OCI?
+                    </p>
+                </div>
+            </div>
+            <br/>
+            <h5 class="font-weight-bold"># Referencias:</h5>
+            <div class="row">
+                <div class="col-sm">
+                    <p style="font-size: smaller;">
+                        [1] <a target="_blank" href="https://www.youtube.com/watch?v=2BEwqbCbQuM">https://www.youtube.com/watch?v=2BEwqbCbQuM</a><br/>
+                        [2] <a target="_blank" href="https://i.blackhat.com/USA-19/Wednesday/us-19-Landers-Flying-A-False-Flag-Advanced-C2-Trust-Conflicts-And-Domain-Takeover.pdf">https://i.blackhat.com/USA-19/Wednesday/us-19-Landers-Flying-A-False-Flag-Advanced-C2-Trust-Conflicts-And-Domain-Takeover.pdf</a><br/>
+                        [3] <a target="_blank" href="https://attack.mitre.org/tactics/TA0011/">https://attack.mitre.org/tactics/TA0011/</a><br/>
+                        [4] <a target="_blank" href="https://media.defcon.org/DEF%20CON%2028/DEF%20CON%20Safe%20Mode%20presentations/DEF%20CON%20Safe%20Mode%20-%20Erik%20Hunstad%20-%20Domain%20Fronting%20is%20Dead%20Long%20Live%20Domain%20Fronting.pdf">https://media.defcon.org/DEF%20CON%2028/DEF%20CON%20Safe%20Mode%20presentations/DEF%20CON%20Safe%20Mode%20-%20Erik%20Hunstad%20-%20Domain%20Fronting%20is%20Dead%20Long%20Live%20Domain%20Fronting.pdf</a><br/>
+                        [5] <a target="_blank" href="https://www.usenix.org/system/files/sec21_slides_wei.pdf">https://www.usenix.org/system/files/sec21_slides_wei.pdf</a><br/>
+                        [6] <a target="_blank" href="https://i.blackhat.com/asia-21/Thursday-Handouts/as-21-Ding-Domain-Borrowing-Catch-My-C2-Traffic-If-You-Can.pdf">https://i.blackhat.com/asia-21/Thursday-Handouts/as-21-Ding-Domain-Borrowing-Catch-My-C2-Traffic-If-You-Can.pdf</a><br/>
+                        [7] <a target="_blank" href="https://attack.mitre.org/techniques/T1071/001/">https://attack.mitre.org/techniques/T1071/001/</a><br/>
+                        [8] <a target="_blank" href="https://attack.mitre.org/techniques/T1102/">https://attack.mitre.org/techniques/T1102/</a><br/>
+                        [9] <a target="_blank" href="https://lots-project.com/">https://lots-project.com/</a><br/>
+                        [10] <a target="_blank" href="https://www.kaspersky.com/about/press-releases/2018_russian-speaking-apts-turla-and-sofacy-share-malware-delivery-scheme-and-overlap-some-targets-in-asia">https://www.kaspersky.com/about/press-releases/2018_russian-speaking-apts-turla-and-sofacy-share-malware-delivery-scheme-and-overlap-some-targets-in-asia</a><br/>
+                        [11] <a target="_blank" href="https://eur-lex.europa.eu/legal-content/ES/TXT/PDF/?uri=CELEX:32019D0797">https://eur-lex.europa.eu/legal-content/ES/TXT/PDF/?uri=CELEX:32019D0797</a><br/>
+                        [12] <a target="_blank" href="https://eur-lex.europa.eu/legal-content/ES/TXT/PDF/?uri=CELEX:32020D1537">https://eur-lex.europa.eu/legal-content/ES/TXT/PDF/?uri=CELEX:32020D1537</a><br/>
+                        [13] <a target="_blank" href="https://opencontainers.org/">https://opencontainers.org/</a><br/>
+                        [14] <a target="_blank" href="https://github.com/opencontainers/runtime-spec/blob/main/spec.md">https://github.com/opencontainers/runtime-spec/blob/main/spec.md</a><br/>
+                        [15] <a target="_blank" href="https://github.com/opencontainers/image-spec/blob/main/spec.md">https://github.com/opencontainers/image-spec/blob/main/spec.md</a><br/>
+                        [16] <a target="_blank" href="https://github.com/opencontainers/distribution-spec/blob/main/spec.md">https://github.com/opencontainers/distribution-spec/blob/main/spec.md</a><br/>
+                        [17] <a target="_blank" href="https://www.cobaltstrike.com/">https://www.cobaltstrike.com/</a><br/>
+                        [18] <a target="_blank" href="https://unit42.paloaltonetworks.com/leaked-docker-code/">https://unit42.paloaltonetworks.com/leaked-docker-code/</a><br/>
+                        [19] <a target="_blank" href="https://www.cobaltstrike.com/help-externalc2">https://www.cobaltstrike.com/help-externalc2</a><br/>
+                        [20] <a target="_blank" href="https://github.com/cobbr/C2Bridge">https://github.com/cobbr/C2Bridge</a><br/>
+                        [21] <a target="_blank" href="https://docs.mythic-c2.net/customizing/c2-related-development">https://docs.mythic-c2.net/customizing/c2-related-development</a><br/>
+                        [22] <a target="_blank" href="https://www.mdsec.co.uk/nighthawk/">https://www.mdsec.co.uk/nighthawk/</a><br/>
+                        [23] <a target="_blank" href="https://github.com/FSecureLABS/C3">https://github.com/FSecureLABS/C3</a><br/>
+                    </p>
+                </div>
+            </div>
+            <hr/>
+            <p class="text-muted">
+                <span class="badge badge-secondary">spanish</span>
+                <span class="badge badge-secondary">infosec</span>
+                <span class="badge badge-secondary">research</span>
+                <span class="badge badge-secondary">c2</span>
+                <span class="badge badge-secondary">covert</span>
+                <span class="badge badge-secondary">ttp</span>
+                <span class="badge badge-secondary">tradecraft</span>
+            </p>
+        </div>
+    </div>
+</div>
+<br/>
+<script src="https://code.jquery.com/jquery-3.4.1.slim.min.js" integrity="sha384-J6qa4849blE2+poT4WnyKhv5vZF5SrPo0iEjwBvKU7imGFAV0wwj1yYfoRSJoZ+n" crossorigin="anonymous"></script>
+<script src="https://cdn.jsdelivr.net/npm/popper.js@1.16.0/dist/umd/popper.min.js" integrity="sha384-Q6E9RHvbIyZFJoft+2mJbHaEWldlvI9IOYy5n3zV9zzTtmI3UksdQRVvoxMfooAo" crossorigin="anonymous"></script>
+<script src="https://stackpath.bootstrapcdn.com/bootstrap/4.4.1/js/bootstrap.min.js" integrity="sha384-wfSDF2E50Y2D1uUdj0O3uMBJnjuUD4Ih7YwaYd1iqfktj0Uod8GCExl3Og8ifwB6" crossorigin="anonymous"></script>
+<script src="https://cdn.jsdelivr.net/npm/prismjs@1.19.0/prism.min.js"></script>
+</body>
+</html>
