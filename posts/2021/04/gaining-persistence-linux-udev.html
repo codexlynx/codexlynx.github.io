@@ -32,7 +32,7 @@
                         ampliamente aprovechados durante la fase de <span class="font-weight-bold">Installation</span> del <span class="font-weight-bold">Cyber Kill Chain&reg;</span> (by Lockheed Martin),
                         para ganar persistencia en los activos comprometidos por parte, tanto de pentesters y Red Teams como
                         de actores reales en el teatro de operaciones del ciberespacio. Dichas técnicas son ampliamente documentadas
-                        en <span class="font-weight-bold">MITRE Att&ck</span> bajo el identificador "<a href="https://attack.mitre.org/techniques/T1546/" target="_blank">T1546</a>", donde se exponen diversos métodos en los que se abusa
+                        en <span class="font-weight-bold">MITRE Att&ck</span> bajo el identificador "<span class="font-weight-bold">T1546</span>" <a href="https://attack.mitre.org/techniques/T1546/" target="_blank">[1]</a>, donde se exponen diversos métodos en los que se abusa
                         de estos mecanismos, mayoritariamente en sistemas Windows. En las siguientes líneas se expone cómo sacar
                         provecho del sistema <span class="font-italic">Udev</span> de Linux para precisamente esto, ganar persistencia,
                         ampliando así las técnicas disponibles para tal fin.
@@ -104,7 +104,7 @@
                             </ul>
                         </div>
                         <p>
-                            Adicionalmente te invitamos también a que profundices en la <a href="https://linux.die.net/man/7/udev" target="_blank">documentación de <span class="font-italic">Udev</span></a>.
+                            Adicionalmente te invitamos también a que profundices en la documentación de <span class="font-italic">Udev</span> <a href="https://linux.die.net/man/7/udev" target="_blank">[2]</a>.
                         </p>
                         <pre><code class="lang-highlight">$ udevadm monitor --environment
 
@@ -160,6 +160,16 @@ SEQNUM=33473</code></pre>
                             técnicas para su ejecución, un hecho que facilita que pueda ser utilizada por <span class="font-weight-bold">commodity attackers</span>
                             y no sólo por actores que dispongan de grandes recursos y capacidades operativas, como actores estatales y
                             otros grupos APT, como si que podría llegar a ocurrir con otras TTPs.
+                        </p>
+                    </div>
+                </div>
+                <br/>
+                <h5 class="font-weight-bold"># Referencias:</h5>
+                <div class="row">
+                    <div class="col-sm">
+                        <p style="font-size: smaller;">
+                            [1] <a target="_blank" href="https://attack.mitre.org/techniques/T1546/">https://attack.mitre.org/techniques/T1546/</a><br/>
+                            [2] <a target="_blank" href="https://linux.die.net/man/7/udev">https://linux.die.net/man/7/udev</a><br/>
                         </p>
                     </div>
                 </div>
